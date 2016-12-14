@@ -1,0 +1,72 @@
+#+TITLE: Platform For Content Server
+#+AUTHOR: VLEAD
+#+DATE:  [2016-14-Wed]
+#+SETUPFILE: ../../org-templates/level-2.org
+#+TAGS: boilerplate(b)
+#+EXCLUDE_TAGS: boilerplate
+#+OPTIONS: ^:nil
+
+* Introduction
+This code accepts resource files, saves them in /static folder and keeps a
+dictionary with resource-ids as key and path to corresponding resource-file as
+its value
+* Implementation
+** imports
+#+BEGIN_SRC python :tangle app.py
+from flask import Flask, request
+import flask, sys, os, pprint
+from werkzeug.utils import secure_filename
+#+END_SRC
+
+** Initialization
+setting up global environment
+
+#+BEGIN_SRC python :tangle app.py
+app = Flask(__name__)
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.getcwd()),'static')
+Map = {}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+ALLOWED_EXTENSIONS = set(['html'])
+
+#+END_SRC
+** Allowed files check
+   Checks if file getting uploaded has valid extension
+#+BEGIN_SRC python :tangle app.py
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+
+#+END_SRC
+ 
+** Handle file uploads
+   Following function responds on call to '/upload'. Saves uploaded file to
+   /static and creates a map between resource-ids and corresponding resource
+   location
+#+BEGIN_SRC python :tangle app.py
+@app.route('/upload', methods = ['GET', 'POST'])
+def upload_file():
+	if request.method == 'POST':
+                if 'file' not in request.files:
+                    flash('No file part')
+                    return redirect(request.url)
+           	f = request.files['file']
+                if f.filename == '':
+                    flash('No file selected')
+                    return redirect(request.url)
+                if f and allowed_file(f.filename):
+                    filename = secure_filename(f.filename)
+                    f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+		    multiDict = request.values
+		    iterable = multiDict.iteritems(multi=False)
+	            keyValuePair = next(iterable)
+		    finalPath = os.path.join(UPLOAD_FOLDER, str(keyValuePair[1]))
+		    Map[keyValuePair[0]] = finalPath
+    	return 'Success'
+
+
+#+END_SRC
+* Execution
+#+BEGIN_SRC python :tangle app.py
+if __name__ == '__main__':
+	app.run()
+
+#+END_SRC
